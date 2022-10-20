@@ -1,0 +1,29 @@
+{
+  "name": "hardhat-project",
+  "scripts": {
+    "clean": "hardhat clean",
+    "compile": "hardhat compile",
+    "test:init": "hardhat test test/test-init.ts",
+    "flatten": "hardhat flatten > full/flatten_ERC1155EL.sol",
+    "deploy:init": "hardhat --network mumbai run scripts/deploy-init.ts",
+    "verify:init": "hardhat --network mumbai run scripts/verify-init.ts",
+    "deploy:upgrade": "hardhat --network mumbai run scripts/deploy-upgrade.ts",
+    "verify:upgrade": "hardhat --network mumbai run scripts/verify-upgrade.ts",
+    "deploy:zk": "hardhat --network zk run scripts/deploy-init.ts"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@nomiclabs/hardhat-ethers": "^2.1.1",
+    "@nomiclabs/hardhat-etherscan": "^3.1.0",
+    "@openzeppelin/contracts": "^4.7.3",
+    "@openzeppelin/hardhat-upgrades": "^1.20.0",
+    "@types/chai": "^4.3.3",
+    "dotenv": "^16.0.2",
+    "ethereum-input-data-decoder": "^0.4.2",
+    "ethers": "^5.7.1",
+    "hardhat": "^2.11.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts-upgradeable": "^4.8.0-rc.1"
+  }
+}
