@@ -9,7 +9,7 @@
     "verify:init": "hardhat --network mumbai run scripts/verify-init.ts",
     "deploy:upgrade": "hardhat --network mumbai run scripts/deploy-upgrade.ts",
     "verify:upgrade": "hardhat --network mumbai run scripts/verify-upgrade.ts",
-    "deploy:zk": "hardhat --network zk run scripts/deploy-init.ts"
+    "deploy:dynamic": "hardhat --network mumbai run scripts/deploy-dynamic.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
