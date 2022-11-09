@@ -4,11 +4,11 @@ import { writeFileSync } from 'fs'
 
 async function main() {
     const address = readFileSync(__dirname + '/../.proxy-contract', 'utf8').toString();
-    const contractFactory = await ethers.getContractFactory("ERC1155Dynamic");
+    const contractFactory = await ethers.getContractFactory("PublicMinting");
     const contract = await upgrades.upgradeProxy(address, contractFactory, 
-        {
-            call: {fn: 'existing', args: ["0x699213E7c3bD356DF066ED05f4d01BAf021C957c"]}
-        }
+        // {
+        //     call: {fn: 'existing', args: ["0x699213E7c3bD356DF066ED05f4d01BAf021C957c"]}
+        // }
     );
 
     // const implementation = await upgrades.erc1967.getImplementationAddress(contract.address);

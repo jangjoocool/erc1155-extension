@@ -8,7 +8,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.2",
+  solidity: "0.8.9",
   networks: {
     mumbai: {
       url: process.env.MUMBAI_URL || "" ,
