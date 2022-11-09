@@ -72,6 +72,7 @@ abstract contract MintingUpgradeable is Initializable, ContextUpgradeable {
     function _withdraw() internal virtual {
         require(_collector != address(0), "Minting: collector is not exist");
         uint256 amount = address(this).balance;
+        require(amount > 0, "Minting: contract's MATIC balance is zero");
         _collector.transfer(amount);
         emit Withdraw(_collector, amount);
     }
