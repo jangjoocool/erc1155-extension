@@ -7,9 +7,7 @@ import '@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeab
 
 abstract contract WhitelistUpgradeable is Initializable, ContextUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
-    
     EnumerableSetUpgradeable.AddressSet private _whitelist;
-    uint256 private _limitCount;
 
     /**
      * @dev Emitted when adding whitelist.
@@ -62,19 +60,10 @@ abstract contract WhitelistUpgradeable is Initializable, ContextUpgradeable {
     }
 
     /**
-     * @dev Set limit count for whitelist to a new limit count.
-     * @param limitCount Limit count for whitelist.
-     */
-    function _setLimitCount(uint256 limitCount) internal virtual {
-        _limitCount = limitCount;
-    }
-
-    /**
      * @dev Add a address in whitelist.
      * @param addr The address to add in whitelist.
      */
     function _addWhitelist(address addr) internal virtual {
-        require(_whitelist.length() < _limitCount, "Whitelist: limit reached");
         require(addr != address(0), "Whitelist: address is tho zero address");
         require(!_whitelist.contains(addr), "Whitelist: address is already in the whitelist");
         _whitelist.add(addr);
@@ -96,8 +85,7 @@ abstract contract WhitelistUpgradeable is Initializable, ContextUpgradeable {
      * @param addrs a batch of addresses to add in whitelist.
      */
     function _addWhitelistBatch(address[] memory addrs) internal virtual {
-        for(uint256 i = 0; i < addrs.length; i++) {
-            require(_whitelist.length() < _limitCount, "Whitelist: limit reached");
+        for (uint256 i = 0; i < addrs.length; i++) {
             address addr = addrs[i];
             require(addr != address(0), "Whitelist: address is tho zero address");
             require(!_whitelist.contains(addr), "Whitelist: address is already in the whitelist");
@@ -111,19 +99,11 @@ abstract contract WhitelistUpgradeable is Initializable, ContextUpgradeable {
      * @param addrs a batch of addresses to remove in whitelist.
      */
     function _removeWhitelistBatch(address[] memory addrs) internal virtual {
-        for(uint256 i = 0; i < addrs.length; i++) {
+        for (uint256 i = 0; i < addrs.length; i++) {
             address addr = addrs[i];
             require(_whitelist.contains(addr), "Whitelist: address is not the whitelist");
             _whitelist.remove(addr);
         }
         emit RemoveWhiteListBatch(addrs);
-    }
-
-    /**
-     * @dev reset whitelist and limit count.
-     */
-    function _resetWhitelist() internal virtual {
-        _removeWhitelistBatch(_whitelist.values());
-        _setLimitCount(0);
     }
 }

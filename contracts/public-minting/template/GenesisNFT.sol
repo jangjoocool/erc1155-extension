@@ -6,11 +6,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./lib/Whitelist.sol";
-import "./lib/Minting.sol";
+import "./lib/MintingSales.sol";
 
-contract GenesisNFT is ERC721URIStorage, Ownable, Whitelist, Minting {
+contract GenesisNFT is ERC721URIStorage, Ownable, Whitelist, MintingSales {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenTracker;
+    uint256 public whitelistLimitCount;
 
     constructor(string memory name_, string memory symbol_) ERC721(name_, symbol_) {}
 
@@ -18,11 +19,17 @@ contract GenesisNFT is ERC721URIStorage, Ownable, Whitelist, Minting {
         _withdraw();
     }
 
-    function resetWhitelist() public onlyOwner {
-        _resetWhitelist();
+    function setWhitelistLimit(uint256 limitCount) external onlyOwner {
+        whitelistLimitCount = limitCount;
     }
 
-    function addWihtelist(address addr) external onlyOwner {
+    function resetWhitelist() external onlyOwner {
+        _removeWhitelistBatch(allWhitelist());
+        whitelistLimitCount = 0;
+    }
+
+    function addWhitelist(address addr) external onlyOwner {
+        require(allWhitelist().length < whitelistLimitCount, "Whitelist: limit reached");
         _addWhitelist(addr);
     }
 
@@ -40,8 +47,10 @@ contract GenesisNFT is ERC721URIStorage, Ownable, Whitelist, Minting {
         uint256 maxMintingAmount,
         uint256 mintPrice,
         string calldata baseURIforMinting
-    ) external onlyOwner {    
-        _setupMinting(
+    ) 
+        external onlyOwner
+    {    
+        _setupSales(
             antibotInterval,
             mintLimitPerOnce,
             mintLimitPerAccount,
@@ -54,13 +63,32 @@ contract GenesisNFT is ERC721URIStorage, Ownable, Whitelist, Minting {
         );
     }
 
-    function mintingForSale(uint256 requestedCount) external payable mintingValidator(requestedCount, balanceOf(_msgSender())) {
-        for(uint256 i = 0; i < requestedCount; i++) {
-            uint256 tokenId = currentMintingIndex();
-            _mint(_msgSender(), tokenId);
-            _setTokenURI(tokenId, string(abi.encodePacked(mintingInfo().baseURIforMinting, Strings.toString(tokenId), ".json")));
-            _addMintingIndex();
-        }
+    function publicMintingForSales(uint256 requestedCount) 
+        external
+        payable
+        blockNumberValidator
+        salesValidator(requestedCount, balanceOf(_msgSender()))
+    {
+        -mintingForSales(requestedCount);
         _setLastCallBlockNumber();
+    }
+
+    function privateMintingForSales(uint256 requestedCount)
+        external
+        payable
+        onlyWhitelist
+        salesValidator(requestedCount, balanceOf(_msgSender()))
+    {
+        -mintingForSales(requestedCount);
+        _setLastCallBlockNumber();
+    }
+
+    function _mintingForSales(uint256 requestedCount) internal {
+        for(uint256 i = 0; i < requestedCount; i++) {
+            uint256 tokenId = currentSalesIndex();
+            _mint(_msgSender(), tokenId);
+            _setTokenURI(tokenId, string(abi.encodePacked(salesInfo().baseURIforMinting, Strings.toString(tokenId), ".json")));
+            _addSalesIndex();
+        }
     }
 }

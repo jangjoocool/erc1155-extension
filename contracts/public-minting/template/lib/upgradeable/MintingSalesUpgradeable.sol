@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
-abstract contract Minting is Context {
-    using SafeMath for uint256;
+abstract contract MintingSalesUpgradeable is Initializable, ContextUpgradeable {
+    using SafeMathUpgradeable for uint256;
 
     // To prevent bot attack, we record the last contract call block number.
     mapping (address => uint256) private _lastCallBlockNumber;
     address payable private _collector;
-    uint256 private _mintingIndex;
-    MintingInfo private _mintingInfo;
+    uint256 private _salesIndex;
+    SalesInfo private _salesInfo;
 
-    struct MintingInfo {
+    struct SalesInfo {
         uint256 antibotInterval;       // Interval block count to prevent bot attack
         uint256 mintLimitPerOnce;      // Limit per once for minting
         uint256 mintLimitPerAccount;   // Limit per account for minting
@@ -28,30 +29,56 @@ abstract contract Minting is Context {
     /**
      * @dev Emitted when withdraw payment.
      * @param to The address to receive payment.
+     * @param amount A mount of send to collector.
      */
-    event Withdraw(address to, uint256 balance);
+    event Withdraw(address to, uint256 amount);
 
-    modifier mintingValidator(uint256 requestedCount, uint256 balance) {
-        require(block.number >= _mintingInfo.mintStartBlockNumber, "Minting: not yet started");
-        require(block.number <= _mintingInfo.mintEndBlockNumber
-                || _mintingIndex < _mintingInfo.mintStartIndex.add(_mintingInfo.maxMintingAmount), "Minting: sale has ended");
-        require(block.number > _lastCallBlockNumber[_msgSender()].add(_mintingInfo.antibotInterval), "Minting: bot is not allowed");
-        require(requestedCount > 0 && requestedCount <= _mintingInfo.mintLimitPerOnce, "Minting: too many request or zero request");
-        require(msg.value == _mintingInfo.mintPrice.mul(requestedCount), "Minting: not enough MATIC");
-        require(balance.add(requestedCount) <= _mintingInfo.mintLimitPerAccount, "Minting: exceed max amount per account");
+    /**
+     * @dev Emitted when set up a minting sales.
+     * @param salesInfo The minting sales info.
+     */
+    event SetupSales(SalesInfo salesInfo);
+
+    function __MintingSale_init() internal onlyInitializing {}
+
+    function __MintingSale_init_unchained() internal onlyInitializing {}
+
+    modifier blockNumberValidator() {
+        require(block.number >= _salesInfo.mintStartBlockNumber, "Sales: not yet started");
+        if (_salesInfo.mintEndBlockNumber > 0) {
+            require(block.number <= _salesInfo.mintEndBlockNumber, "Sales: has ended");
+        }
         _;
     }
 
-    function mintingInfo() public view returns(MintingInfo memory) {
-        return _mintingInfo;
+    modifier salesValidator(uint256 requestedCount, uint256 balance) {
+        require(block.number > _lastCallBlockNumber[_msgSender()].add(_salesInfo.antibotInterval), "Sales: bot is not allowed");
+        require(_salesIndex < _salesInfo.mintStartIndex.add(_salesInfo.maxMintingAmount), "Sales: sold out");
+        require(requestedCount > 0 && requestedCount <= _salesInfo.mintLimitPerOnce, "Sales: too many request or zero request");
+        require(msg.value == _salesInfo.mintPrice.mul(requestedCount), "Sales: not enough MATIC");
+        require(balance.add(requestedCount) <= _salesInfo.mintLimitPerAccount, "Sales: exceed max amount per account");
+        _;
     }
 
-    function currentMintingIndex() public view returns(uint256) {
-        return _mintingIndex;
+    /**
+     * @dev Returns minting info.
+     */
+    function salesInfo() public view virtual returns(SalesInfo memory) {
+        return _salesInfo;
     }
 
+    /**
+     * @dev Returns current minting index.
+     */
+    function currentMintingIndex() public view virtual returns(uint256) {
+        return _salesIndex;
+    }
+
+    /**
+     * @dev Add minting index.
+     */
     function _addMintingIndex() internal virtual {
-        _mintingIndex = _mintingIndex.add(1);
+        _salesIndex = _salesIndex.add(1);
     }
 
     /**
@@ -103,8 +130,10 @@ abstract contract Minting is Context {
         uint256 maxMintingAmount,
         uint256 mintPrice,
         string calldata baseURIforMinting
-    ) internal {
-        _mintingInfo = MintingInfo(
+    ) 
+        internal virtual
+    {
+        _salesInfo = SalesInfo(
             antibotInterval,
             mintLimitPerOnce,
             mintLimitPerAccount,
@@ -115,6 +144,7 @@ abstract contract Minting is Context {
             mintPrice,
             baseURIforMinting
         );
-        _mintingIndex = mintStartIndex;
+        _salesIndex = mintStartIndex;
+        emit SetupSales(_salesInfo);
     }
 }

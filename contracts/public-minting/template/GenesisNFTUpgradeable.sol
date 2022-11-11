@@ -8,11 +8,12 @@ import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "./lib/upgradeable/WhitelistUpgradeable.sol";
-import "./lib/upgradeable/MintingUpgradeable.sol";
+import "./lib/upgradeable/MintingSalesUpgradeable.sol";
 
-contract GenesisNFTUpgradeable is Initializable, ERC721URIStorageUpgradeable, OwnableUpgradeable, WhitelistUpgradeable, MintingUpgradeable, UUPSUpgradeable {
+contract GenesisNFTUpgradeable is Initializable, ERC721URIStorageUpgradeable, OwnableUpgradeable, WhitelistUpgradeable, MintingSalesUpgradeable, UUPSUpgradeable {
     using CountersUpgradeable for CountersUpgradeable.Counter;
     CountersUpgradeable.Counter private _tokenTracker;
+    uint256 public whitelistLimitCount;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -32,11 +33,17 @@ contract GenesisNFTUpgradeable is Initializable, ERC721URIStorageUpgradeable, Ow
         _withdraw();
     }
 
-    function resetWhitelist() public onlyOwner {
-        _resetWhitelist();
+    function setWhiteListLimit(uint256 limitCount) external onlyOwner {
+        whitelistLimitCount = limitCount;
     }
 
-    function addWihtelist(address addr) external onlyOwner {
+    function resetWhitelist() external onlyOwner {
+        _removeWhitelistBatch(allWhitelist());
+        whitelistLimitCount = 0;
+    }
+
+    function addWhitelist(address addr) external onlyOwner {
+        require(allWhitelist().length < whitelistLimitCount, "Whitelist: limit reached");
         _addWhitelist(addr);
     }
 
@@ -54,7 +61,9 @@ contract GenesisNFTUpgradeable is Initializable, ERC721URIStorageUpgradeable, Ow
         uint256 maxMintingAmount,
         uint256 mintPrice,
         string calldata baseURIforMinting
-    ) external onlyOwner {    
+    ) 
+        external onlyOwner
+    {    
         _setupMinting(
             antibotInterval,
             mintLimitPerOnce,
@@ -68,13 +77,32 @@ contract GenesisNFTUpgradeable is Initializable, ERC721URIStorageUpgradeable, Ow
         );
     }
 
-    function mintingForSale(uint256 requestedCount) external payable mintingValidator(requestedCount, balanceOf(_msgSender())) {
-        for(uint256 i = 0; i < requestedCount; i++) {
-            uint256 tokenId = currentMintingIndex();
-            _mint(_msgSender(), tokenId);
-            _setTokenURI(tokenId, string(abi.encodePacked(mintingInfo().baseURIforMinting, StringsUpgradeable.toString(tokenId), ".json")));
-            _addMintingIndex();
-        }
+    function publicMintingForSales(uint256 requestedCount)
+        external
+        payable
+        blockNumberValidator
+        salesValidator(requestedCount, balanceOf(_msgSender()))
+    {
+        -mintingForSales(requestedCount);
         _setLastCallBlockNumber();
+    }
+
+    function privateMintingForSales(uint256 requestedCount)
+        external
+        payable
+        onlyWhitelist
+        salesValidator(requestedCount, balanceOf(_msgSender()))
+    {
+        -mintingForSales(requestedCount);
+        _setLastCallBlockNumber();
+    }
+
+    function _mintingForSales(uint256 requestedCount) internal {
+        for(uint256 i = 0; i < requestedCount; i++) {
+            uint256 tokenId = currentSalesIndex();
+            _mint(_msgSender(), tokenId);
+            _setTokenURI(tokenId, string(abi.encodePacked(salesInfo().baseURIforMinting, Strings.toString(tokenId), ".json")));
+            _addSalesIndex();
+        }
     }
 }
